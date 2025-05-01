@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package ticketing;
+
+service TicketingService {
+  rpc SubmitFeedback (stream FeedbackMessage) returns (TicketConfirmation);
+}
+
+message FeedbackMessage {
+  string user_id = 1;
+  string content = 2;
+  int64 timestamp = 3;
+}
+
+message TicketConfirmation {
+  string ticket_id = 1;
+  string status = 2;
+}

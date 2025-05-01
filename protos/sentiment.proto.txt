@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package sentiment;
+
+service SentimentAnalysisService {
+  rpc AnalyzeFeedback (FeedbackText) returns (stream SentimentScore);
+}
+
+message FeedbackText {
+  string text = 1;
+}
+
+message SentimentScore {
+  string category = 1; // "Positive", "Negative", "Neutral"
+  float confidence = 2;
+}
