@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Support Chat</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #chat-container { max-width: 600px; margin: 0 auto; }
+    #chat-log { 
+      height: 400px; 
+      overflow-y: auto; 
+      border: 1px solid #ddd; 
+      padding: 10px; 
+      margin-bottom: 10px;
+      background: #f9f9f9;
+    }
+    .message { margin-bottom: 10px; }
+    .user-message { color: #0066cc; }
+    .bot-message { color: #009933; }
+    .system-message { color: #666; font-style: italic; }
+    #message-input { 
+      width: 75%; 
+      padding: 8px; 
+      margin-right: 5px;
+    }
+    button { 
+      padding: 8px 15px; 
+      background: #4CAF50; 
+      color: white; 
+      border: none; 
+      cursor: pointer;
+    }
+    button:hover { background: #45a049; }
+    .timestamp { 
+      font-size: 0.8em; 
+      color: #999; 
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="chat-container">
+    <h1>Mad Egg Support</h1>
+    <div id="chat-log"></div>
+    <div>
+      <input type="text" id="message-input" placeholder="Type your message...">
+      <button id="send-button">Send</button>
+      <button id="start-chat">Start Live Chat</button>
+    </div>
+  </div>
+
+  <script>
+    const chatLog = document.getElementById('chat-log');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const startChatButton = document.getElementById('start-chat');
+    
+    let liveChatConnection = null;
+    let isLiveChat = false;
+
+    function addMessage(sender, text) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${sender}-message`;
+      
+      const timestamp = new Date().toLocaleTimeString();
+      const formattedText = text.replace(/\n/g, '<br>');
+      
+      messageDiv.innerHTML = `<strong>${sender}:</strong> ${formattedText} <span class="timestamp">${timestamp}</span>`;
+      chatLog.appendChild(messageDiv);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    function startLiveChat() {
+      if (liveChatConnection) return;
+      
+      isLiveChat = true;
+      addMessage('system', 'Starting live chat session...');
+      
+      liveChatConnection = new WebSocket('ws://localhost:3000');
+      
+      liveChatConnection.onopen = () => {
+        addMessage('system', 'Connected to live chat!');
+      };
+      
+      liveChatConnection.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        addMessage(message.sender, message.text);
+      };
+      
+      liveChatConnection.onerror = (error) => {
+        addMessage('system', `Error: ${error.message}`);
+      };
+      
+      liveChatConnection.onclose = () => {
+        addMessage('system', 'Chat session ended');
+        liveChatConnection = null;
+        isLiveChat = false;
+      };
+      
+      startChatButton.textContent = 'End Chat';
+      sendButton.textContent = 'Send (Live)';
+    }
+
+    function endLiveChat() {
+      if (liveChatConnection) {
+        liveChatConnection.close();
+      }
+      startChatButton.textContent = 'Start Live Chat';
+      sendButton.textContent = 'Send';
+      isLiveChat = false;
+    }
+
+    async function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message) return;
+      
+      addMessage('user', message);
+      messageInput.value = '';
+      
+      if (isLiveChat) {
+        if (liveChatConnection && liveChatConnection.readyState === WebSocket.OPEN) {
+          liveChatConnection.send(JSON.stringify({ text: message }));
+        } else {
+          addMessage('system', 'Not connected to chat server');
+        }
+      } else {
+        try {
+          const response = await fetch('/api/chatbot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message })
+          });
+          
+          if (!response.ok) throw new Error('Request failed');
+          const data = await response.json();
+          addMessage('bot', data.reply);
+        } catch (err) {
+          addMessage('system', 'Error sending message. Please try again.');
+        }
+      }
+    }
+
+    startChatButton.addEventListener('click', () => {
+      if (isLiveChat) endLiveChat();
+      else startLiveChat();
+    });
+
+    sendButton.addEventListener('click', sendMessage);
+    
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
+</body>
+</html>

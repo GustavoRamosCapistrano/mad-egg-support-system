@@ -3,14 +3,19 @@ syntax = "proto3";
 package sentiment;
 
 service SentimentAnalysisService {
+  // Server Streaming (Existing)
   rpc AnalyzeFeedback (FeedbackText) returns (stream SentimentScore);
+
+  // Simple RPC (New): Single-score analysis
+  rpc GetSingleSentiment (FeedbackText) returns (SentimentScore);
 }
 
 message FeedbackText {
   string text = 1;
+  string api_key = 2; // Auth
 }
 
 message SentimentScore {
-  string category = 1; // "Positive", "Negative", "Neutral"
+  string category = 1;
   float confidence = 2;
 }

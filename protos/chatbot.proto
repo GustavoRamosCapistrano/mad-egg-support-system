@@ -3,14 +3,31 @@ syntax = "proto3";
 package chatbot;
 
 service ChatBotService {
+  // Simple RPC (Existing)
   rpc GetBotResponse (UserMessage) returns (BotReply);
+
+  // Server Streaming (New): Real-time suggestions
+  rpc StreamSuggestions (UserMessage) returns (stream Suggestion);
+
+  // Bidirectional Streaming (New): Live chat
+  rpc LiveChat (stream ChatMessage) returns (stream ChatMessage);
 }
 
 message UserMessage {
   string message = 1;
   string user_id = 2;
+  string api_key = 3; // Auth
 }
 
 message BotReply {
   string reply = 1;
+}
+
+message Suggestion {
+  string suggestion = 1;
+}
+
+message ChatMessage {
+  string user_id = 1;
+  string text = 2;
 }

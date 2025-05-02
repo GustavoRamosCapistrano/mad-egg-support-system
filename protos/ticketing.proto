@@ -3,16 +3,27 @@ syntax = "proto3";
 package ticketing;
 
 service TicketingService {
+  // Client Streaming (Existing)
   rpc SubmitFeedback (stream FeedbackMessage) returns (TicketConfirmation);
+
+  // Simple RPC (New): Check ticket status
+  rpc GetTicketStatus (TicketRequest) returns (TicketStatus);
 }
 
 message FeedbackMessage {
   string user_id = 1;
   string content = 2;
-  int64 timestamp = 3;
+  string api_key = 3; // Auth
 }
 
 message TicketConfirmation {
   string ticket_id = 1;
-  string status = 2;
+}
+
+message TicketRequest {
+  string ticket_id = 1;
+}
+
+message TicketStatus {
+  string status = 1; // "Open", "Resolved"
 }
