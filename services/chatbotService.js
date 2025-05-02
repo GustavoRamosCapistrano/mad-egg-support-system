@@ -8,62 +8,107 @@ const chatbotProto = grpc.loadPackageDefinition(packageDef).chatbot;
 
 const API_KEY = "SECRET123";
 
-function handleUserMessage(message, lastBotMessage = '') {
-  const cleanMessage = message.toLowerCase().replace(/[^\w\s]/gi, '').trim();
-  
-  // Response patterns
-  const isAffirmative = /^(yes|yeah|yep|yup|sure|ok|okay)$/.test(cleanMessage);
-  const isNegative = /^(no|nope|nah|exit|quit|bye|goodbye)$/.test(cleanMessage);
-  
-  // Context handling
-  if (lastBotMessage.includes('Would you like to know our hours or location?')) {
-    if (isAffirmative) return "Great! Please specify:\n\n1. Hours\n2. Location";
-    if (isNegative) return "Thank you for chatting with us! Have a wonderful day! 😊";
+function handleUserMessage(message, lastBotMessage = '', session = {}) {
+  const cleanMessage = message.toLowerCase().trim();
+
+  // Step: Ask for feedback or complaint
+  if (cleanMessage === 'help' || cleanMessage === 'feedback' || cleanMessage === 'complaint') {
+    session.currentStep = 'awaitingFeedbackType';
+    if (session.currentStep === 'awaitingFeedbackType') {
+      if (cleanMessage === 'feedback' || cleanMessage === 'complaint') {
+        session.feedbackType = cleanMessage;
+        session.currentStep = 'awaitingLocation';
+        return "Please select a location:\n\n" +
+               "1. Millenium Walkway\n" +
+               "2. Charlotte Way\n" +
+               "3. Dundrum Shopping Centre\n" +
+               "4. Liffey Valley Shopping Centre";
+      }if (cleanMessage === 'help') {
+        return "Would you like to provide feedback or report a complaint?";
+      }
+    }}
+      
+
+
+  if (session.currentStep === 'awaitingLocation') {
+    const branches = {
+      '1': 'Millenium Walkway',
+      '2': 'Charlotte Way',
+      '3': 'Dundrum Shopping Centre',
+      '4': 'Liffey Valley Shopping Centre'
+    };
+
+    if (branches[cleanMessage]) {
+      session.location = branches[cleanMessage];
+      session.currentStep = 'awaitingMessage';
+      return `Please describe your ${session.feedbackType} in detail:`;
+    }
   }
 
-  if (lastBotMessage.includes('Can I help with anything else?')) {
-    if (isNegative) return "Thank you for chatting with us! Have a great day! 😊";
-    if (isAffirmative) return "What would you like information about?\n\n1. Menu\n2. Hours\n3. Location";
+  if (session.currentStep === 'awaitingMessage') {
+    session.message = message;
+    session.currentStep = 'awaitingEmail';
+    return "Thank you for your message. Could you please provide your email so our manager can follow up?";
   }
 
-  // Menu
+  if (session.currentStep === 'awaitingEmail') {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (emailRegex.test(cleanMessage)) {
+      // Simulate ticket creation
+      const ticketId = 'T-' + Math.floor(Math.random() * 10000);
+      const summary = `📨 Ticket #${ticketId} submitted.\n` +
+                      `🗂️ Type: ${session.feedbackType}\n` +
+                      `📍 Location: ${session.location}\n` +
+                      `📝 Message: ${session.message}\n` +
+                      `📧 Email: ${message}\n` +
+                      `Our manager will get in touch with you soon.`;
+
+      // Reset session
+      session.currentStep = null;
+      session.feedbackType = null;
+      session.location = null;
+      session.message = null;
+
+      return summary;
+    } else {
+      return "That doesn't look like a valid email. Please try again:";
+    }
+  }
+
+  // Default logic if no feedback session is active
   if (/(menu|food|eat|burger|tenders|wings|sides|fries|drinks|shake)/.test(cleanMessage)) {
     return "Our delicious menu includes:\n\n" +
-           "🍔 Chicken Burgers\n" +
-           "🍗 Tenders & Wings\n" +
-           "🍟 Sides & Fries\n" +
-           "🥤 Drinks & Shakes\n\n" +
+           "🍔 Chicken Burgers\n\n" +
+           "OG €14.00\n" +
+           "Nashville Hot Chick 14.95 \n" +
+           "Wild Thing €14.95 \n" +
+           "Honey Baby €14.95 \n" +
+           "GOAT €14.95 \n" +
+           "Heart Breaker €14.50 \n" +
+           "Side Chick €14.00 \n\n" +
+           "🍗 Tenders\n" +
+           "🍟 Sides\n" +
+           "🥤 Drinks\n\n" +
            "Would you like to know our hours or location?";
   }
 
-  // Hours
   if (/(hour|time|open|close|schedule|when)/.test(cleanMessage)) {
     return "🕒 Our opening hours:\n\n" +
-           "Sunday-Thursday: 12pm-10pm\n" +
-           "Friday-Saturday: 12pm-11pm\n\n" +
+           "Sunday-Thursday: 12pm-9pm\n" +
+           "Friday-Saturday: 12pm-10pm\n\n" +
            "Can I help with anything else?";
   }
 
-  // Location
   if (/(location|address|where|find|map|directions)/.test(cleanMessage)) {
     return "📍 Find us at:\n\n" +
-           "123 Main Street\n" +
-           "Dublin, Ireland\n" +
-           "(Near Central Park)\n\n" +
+           "Millenium Walkway\n" +
+           "Charlotte Way\n" +
+           "Dundrum Shopping Centre\n" +
+           "Liffey Valley Shopping Centre\n\n" +
            "Need our menu or hours?";
   }
 
-  // Thanks
-  if (/(thank|thanks|cheers|appreciate)/.test(cleanMessage)) {
-    return "You're welcome! 😊\n\nIs there anything else I can help with?";
-  }
-
-  // Default
-  return "I can help with:\n\n" +
-         "1. 🍔 Menu\n" +
-         "2. 🕒 Hours\n" +
-         "3. 📍 Location\n\n" +
-         "What would you like information about?";
+  return "I can help with:\n\n1. 🍔 Menu\n2. 🕒 Hours\n3. 📍 Location\nOr type 'help' to leave feedback.";
 }
 
 function GetBotResponse(call, callback) {
@@ -81,25 +126,28 @@ function GetBotResponse(call, callback) {
 
 function LiveChat(call) {
   let lastBotMessage = '';
-  
-  // Initial message
+  const session = {
+    currentStep: null,
+    feedbackType: null,
+    location: null,
+    message: null
+  };
+
   call.write({
     user_id: "bot",
-    text: "Hello! I can help with:\n\n1. 🍔 Menu\n2. 🕒 Hours\n3. 📍 Location\n\nWhat would you like?"
+    text: "Hello! I can help with:\n\n1. 🍔 Menu\n2. 🕒 Hours\n3. 📍 Location\n4. Help (Feedback and Complaint)\n\nWhat would you like?"
   });
 
   call.on('data', (message) => {
     try {
-      const reply = handleUserMessage(message.text, lastBotMessage);
+      const reply = handleUserMessage(message.text, lastBotMessage, session);
       lastBotMessage = reply;
-      
-      if (reply.includes('Thank you for chatting')) {
-        call.write({ user_id: "bot", text: reply });
-        call.end();
-        return;
-      }
-      
+
       call.write({ user_id: "bot", text: reply });
+
+      if (reply.includes('Thank you for chatting')) {
+        call.end();
+      }
     } catch (err) {
       console.error('LiveChat error:', err);
       call.write({ user_id: "bot", text: "Please try again." });
@@ -110,7 +158,44 @@ function LiveChat(call) {
   call.on('error', (err) => console.error('LiveChat error:', err));
 }
 
+
+// ✅ Add CreateTicket function
+function CreateTicket(call, callback) {
+  const { user_id, location, feedback_type, message, sentiment } = call.request;
+
+  const ticketId = 'T-' + Math.floor(Math.random() * 10000);
+  const staffAssigned = 'Team Member A'; // or generate dynamically
+
+  console.log(`[Ticket Created] ${ticketId}: ${feedback_type.toUpperCase()} - ${message}`);
+
+  callback(null, {
+    ticket_id: ticketId,
+    status: 'Ticket submitted successfully',
+    staff_assigned: staffAssigned
+  });
+}
+
+// ✅ Optional: Stub for StreamSuggestions
+function StreamSuggestions(call) {
+  const suggestions = [
+    "🍔 Ask about today's menu",
+    "🕒 Check opening hours",
+    "📍 Find your nearest Mad Egg location"
+  ];
+
+  suggestions.forEach(suggestion => {
+    call.write({ suggestion });
+  });
+
+  call.end();
+}
+
 module.exports = {
   service: chatbotProto.ChatBotService.service,
-  implementation: { GetBotResponse, LiveChat }
+  implementation: {
+    GetBotResponse,
+    LiveChat,
+    CreateTicket,
+    StreamSuggestions
+  }
 };

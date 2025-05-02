@@ -33,4 +33,22 @@ function liveChat(userId) {
   return call;
 }
 
-module.exports = { getBotResponse, liveChat };
+
+function createTicket(ticketData) {
+  return new Promise((resolve, reject) => {
+    client.CreateTicket({
+      user_id: ticketData.userId,
+      location: ticketData.location,
+      feedback_type: ticketData.type,
+      message: ticketData.message,
+      sentiment: ticketData.sentiment,
+      api_key: "SECRET123"
+    }, (err, response) => {
+      if (err) return reject(err);
+      resolve(response);
+    });
+  });
+}
+
+// Add to exports
+module.exports = { getBotResponse, liveChat, createTicket };

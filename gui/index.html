@@ -151,6 +151,30 @@
     messageInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendMessage();
     });
-  </script>
+
+    // In your WebSocket message handler:
+if (message.text.includes('describe your')) {
+  const feedbackType = message.text.includes('complaint') ? 'complaint' : 'feedback';
+  showTicketForm(feedbackType);
+}
+
+function showTicketForm(type) {
+  chatLog.innerHTML += `
+    <div id="ticket-form">
+      <textarea id="ticket-message" placeholder="Describe your ${type}..."></textarea>
+      <button onclick="submitTicket('${type}')">Submit</button>
+    </div>
+  `;
+}
+
+async function submitTicket(type) {
+  const message = document.getElementById('ticket-message').value;
+  const response = await fetch('/api/create-ticket', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, message })
+  });
+}
+</script>
 </body>
 </html>
