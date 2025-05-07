@@ -1,180 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Customer Support Chat</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #chat-container { max-width: 600px; margin: 0 auto; }
-    #chat-log { 
-      height: 400px; 
-      overflow-y: auto; 
-      border: 1px solid #ddd; 
-      padding: 10px; 
-      margin-bottom: 10px;
-      background: #f9f9f9;
-    }
-    .message { margin-bottom: 10px; }
-    .user-message { color: #0066cc; }
-    .bot-message { color: #009933; }
-    .system-message { color: #666; font-style: italic; }
-    #message-input { 
-      width: 75%; 
-      padding: 8px; 
-      margin-right: 5px;
-    }
-    button { 
-      padding: 8px 15px; 
-      background: #4CAF50; 
-      color: white; 
-      border: none; 
-      cursor: pointer;
-    }
-    button:hover { background: #45a049; }
-    .timestamp { 
-      font-size: 0.8em; 
-      color: #999; 
-      margin-left: 10px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mad Egg - Support</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;900&display=swap">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-  <div id="chat-container">
-    <h1>Mad Egg Support</h1>
-    <div id="chat-log"></div>
-    <div>
-      <input type="text" id="message-input" placeholder="Type your message...">
-      <button id="send-button">Send</button>
-      <button id="start-chat">Start Live Chat</button>
+    <!-- Header similar to Mad Egg website -->
+    <header class="madegg-header">
+        <div class="container">
+            <nav>
+                <div class="logo">
+                    <img src="https://www.madegg.ie/wp-content/uploads/2022/04/madegg-logo.png" alt="Mad Egg Logo">
+                </div>
+                <ul class="nav-links">
+                    <li><a href="#">Menu</a></li>
+                    <li><a href="#">Locations</a></li>
+                    <li><a href="#">About</a></li>
+                    <li><a href="#">Order</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>CHICKEN SO GOOD IT'LL MAKE YOU CLUCK</h1>
+            <a href="#" class="btn">View Menu</a>
+        </div>
+    </section>
+
+    <!-- Floating Chat Button -->
+    <div class="chat-button" id="chatButton">
+        <i class="fas fa-comment-dots"></i>
     </div>
-  </div>
 
-  <script>
-    const chatLog = document.getElementById('chat-log');
-    const messageInput = document.getElementById('message-input');
-    const sendButton = document.getElementById('send-button');
-    const startChatButton = document.getElementById('start-chat');
-    
-    let liveChatConnection = null;
-    let isLiveChat = false;
-
-    function addMessage(sender, text) {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = `message ${sender}-message`;
-      
-      const timestamp = new Date().toLocaleTimeString();
-      const formattedText = text.replace(/\n/g, '<br>');
-      
-      messageDiv.innerHTML = `<strong>${sender}:</strong> ${formattedText} <span class="timestamp">${timestamp}</span>`;
-      chatLog.appendChild(messageDiv);
-      chatLog.scrollTop = chatLog.scrollHeight;
-    }
-
-    function startLiveChat() {
-      if (liveChatConnection) return;
-      
-      isLiveChat = true;
-      addMessage('system', 'Starting live chat session...');
-      
-      liveChatConnection = new WebSocket('ws://localhost:3000');
-      
-      liveChatConnection.onopen = () => {
-        addMessage('system', 'Connected to live chat!');
-      };
-      
-      liveChatConnection.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-        addMessage(message.sender, message.text);
-      };
-      
-      liveChatConnection.onerror = (error) => {
-        addMessage('system', `Error: ${error.message}`);
-      };
-      
-      liveChatConnection.onclose = () => {
-        addMessage('system', 'Chat session ended');
-        liveChatConnection = null;
-        isLiveChat = false;
-      };
-      
-      startChatButton.textContent = 'End Chat';
-      sendButton.textContent = 'Send (Live)';
-    }
-
-    function endLiveChat() {
-      if (liveChatConnection) {
-        liveChatConnection.close();
-      }
-      startChatButton.textContent = 'Start Live Chat';
-      sendButton.textContent = 'Send';
-      isLiveChat = false;
-    }
-
-    async function sendMessage() {
-      const message = messageInput.value.trim();
-      if (!message) return;
-      
-      addMessage('user', message);
-      messageInput.value = '';
-      
-      if (isLiveChat) {
-        if (liveChatConnection && liveChatConnection.readyState === WebSocket.OPEN) {
-          liveChatConnection.send(JSON.stringify({ text: message }));
-        } else {
-          addMessage('system', 'Not connected to chat server');
-        }
-      } else {
-        try {
-          const response = await fetch('/api/chatbot', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message })
-          });
-          
-          if (!response.ok) throw new Error('Request failed');
-          const data = await response.json();
-          addMessage('bot', data.reply);
-        } catch (err) {
-          addMessage('system', 'Error sending message. Please try again.');
-        }
-      }
-    }
-
-    startChatButton.addEventListener('click', () => {
-      if (isLiveChat) endLiveChat();
-      else startLiveChat();
-    });
-
-    sendButton.addEventListener('click', sendMessage);
-    
-    messageInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
-
-    // In your WebSocket message handler:
-if (message.text.includes('describe your')) {
-  const feedbackType = message.text.includes('complaint') ? 'complaint' : 'feedback';
-  showTicketForm(feedbackType);
-}
-
-function showTicketForm(type) {
-  chatLog.innerHTML += `
-    <div id="ticket-form">
-      <textarea id="ticket-message" placeholder="Describe your ${type}..."></textarea>
-      <button onclick="submitTicket('${type}')">Submit</button>
+    <!-- Chat Container -->
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-header">
+            <h3>Mad Egg Support</h3>
+            <button class="close-chat" id="closeChat">&times;</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- Messages will appear here -->
+        </div>
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="Type your message...">
+            <button id="sendButton"><i class="fas fa-paper-plane"></i></button>
+        </div>
     </div>
-  `;
-}
 
-async function submitTicket(type) {
-  const message = document.getElementById('ticket-message').value;
-  const response = await fetch('/api/create-ticket', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type, message })
-  });
-}
-</script>
+    <script src="chat.js"></script>
 </body>
 </html>
