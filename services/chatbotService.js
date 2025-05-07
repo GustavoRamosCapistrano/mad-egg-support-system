@@ -5,6 +5,7 @@ const path = require('path');
 const PROTO_PATH = path.resolve(__dirname, '../protos/chatbot.proto');
 const packageDef = protoLoader.loadSync(PROTO_PATH);
 const chatbotProto = grpc.loadPackageDefinition(packageDef).chatbot;
+const nodemailer = require('nodemailer');
 
 const API_KEY = "SECRET123";
 
@@ -23,12 +24,11 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
                "2. Charlotte Way\n" +
                "3. Dundrum Shopping Centre\n" +
                "4. Liffey Valley Shopping Centre";
-      }if (cleanMessage === 'help') {
+      } else if (cleanMessage === 'help') {
         return "Would you like to provide feedback or report a complaint?";
       }
-    }}
-      
-
+    }
+  }
 
   if (session.currentStep === 'awaitingLocation') {
     const branches = {
@@ -54,20 +54,31 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
   if (session.currentStep === 'awaitingEmail') {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (emailRegex.test(cleanMessage)) {
-      // Simulate ticket creation
+      session.email = cleanMessage;
+
+      // Send the email now
+      const ticket = {
+        feedbackType: session.feedbackType,
+        location: session.location,
+        message: session.message,
+        email: session.email
+      };
+      sendTicketEmail(ticket);
+
       const ticketId = 'T-' + Math.floor(Math.random() * 10000);
       const summary = `📨 Ticket #${ticketId} submitted.\n` +
-                      `🗂️ Type: ${session.feedbackType}\n` +
-                      `📍 Location: ${session.location}\n` +
-                      `📝 Message: ${session.message}\n` +
-                      `📧 Email: ${message}\n` +
-                      `Our manager will get in touch with you soon.`;
+                      `🗂️ Type: ${ticket.feedbackType}\n` +
+                      `📍 Location: ${ticket.location}\n` +
+                      `📝 Message: ${ticket.message}\n` +
+                      `📧 Email: ${ticket.email}\n\n` +
+                      `✅ Your complaint has been sent to the branch manager. They'll contact you soon.`;
 
       // Reset session
       session.currentStep = null;
       session.feedbackType = null;
       session.location = null;
       session.message = null;
+      session.email = null;
 
       return summary;
     } else {
@@ -199,3 +210,35 @@ module.exports = {
     StreamSuggestions
   }
 };
+
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // true for 465, false for 587
+  auth: {
+    user: 'grc290497@gmail.com',
+    pass: 'gcsdawdbjyirwqgl'
+  }
+});
+function sendTicketEmail(ticket) {
+  const mailOptions = {
+    from: 'grc290497@gmail.com',
+    to: 'grc290497@gmail.com', 
+    subject: `New ${ticket.feedbackType} submitted for ${ticket.location}`,
+    text: `New customer ${ticket.feedbackType} received:
+
+Location: ${ticket.location}
+Message: ${ticket.message}
+Customer Email: ${ticket.email}
+
+Please respond accordingly.`
+  };
+
+  transporter.sendMail(mailOptions, function(error, info){
+    if (error) {
+      console.error('Error sending ticket email:', error);
+    } else {
+      console.log('Ticket email sent:', info.response);
+    }
+  });
+}
