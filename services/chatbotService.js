@@ -1,19 +1,60 @@
+/**
+ * gRPC Chatbot Service Implementation
+ * 
+ * Core Features:
+ * - Natural language conversation handling
+ * - Multi-step feedback collection
+ * - Sentiment analysis
+ * - Email notifications
+ * - Ticket management
+ * 
+ * Service Methods:
+ * 1. GetBotResponse - Unary RPC for single message responses
+ * 2. LiveChat - Bidirectional streaming for conversational chat
+ * 3. CreateTicket - Ticket creation endpoint
+ * 4. StreamSuggestions - Server streaming for suggestions
+ */
+
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 const Sentiment = require('sentiment');
-const sentiment = new Sentiment();
+const sentiment = new Sentiment(); // Initialize sentiment analyzer
+const nodemailer = require('nodemailer');
 
+// ==================================================================
+// gRPC Service Configuration
+// ==================================================================
+
+// Load protocol buffer definition
 const PROTO_PATH = path.resolve(__dirname, '../protos/chatbot.proto');
 const packageDef = protoLoader.loadSync(PROTO_PATH);
 const chatbotProto = grpc.loadPackageDefinition(packageDef).chatbot;
-const nodemailer = require('nodemailer');
 
+// API key for authentication (in production, use environment variables)
 const API_KEY = "SECRET123";
 
+// ==================================================================
+// Core Chatbot Logic
+// ==================================================================
+
+/**
+ * Handles user messages and maintains conversation state
+ * @param {string} message - User input message
+ * @param {string} [lastBotMessage=''] - Last message sent by bot
+ * @param {Object} [session={}] - Conversation session state
+ * @returns {string} Bot response
+ * 
+ * Conversation Flow:
+ * 1. Main menu options
+ * 2. Feedback collection (multi-step)
+ * 3. Menu/hours/location queries
+ * 4. Continuation prompts
+ */
 function handleUserMessage(message, lastBotMessage = '', session = {}) {
     const cleanMessage = message.toLowerCase().trim();
 
+    // Handle conversation continuation logic
     if (session.awaitingContinuation) {
         if (cleanMessage === 'yes' || cleanMessage === 'y' || cleanMessage === 'continue') {
             session.awaitingContinuation = false;
@@ -25,6 +66,7 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
         }
     }
 
+    // Feedback collection workflow
     if (cleanMessage === 'help' || cleanMessage === 'feedback' || cleanMessage === 'complaint' || cleanMessage === '4') {
         session.currentStep = 'awaitingFeedbackType';
         if (session.currentStep === 'awaitingFeedbackType') {
@@ -38,6 +80,7 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
         }
     }
 
+    // Location selection handling
     if (session.currentStep === 'awaitingLocation') {
         const locationMap = {
             '1': 'Millenium Walkway',
@@ -54,7 +97,7 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
             'valley': 'Liffey Valley Shopping Centre'
         };
 
-        // Find the best matching location
+        // Find matching location using flexible input matching
         let selectedLocation = null;
         for (const [key, value] of Object.entries(locationMap)) {
             if (cleanMessage.includes(key)) {
@@ -71,6 +114,7 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
         return "Please select a valid location:\n\n1. Millenium Walkway\n2. Charlotte Way\n3. Dundrum Shopping Centre\n4. Liffey Valley Shopping Centre";
     }
 
+    // Message collection with sentiment analysis
     if (session.currentStep === 'awaitingMessage') {
         session.message = message;
         const sentimentResult = sentiment.analyze(message);
@@ -80,6 +124,7 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
         session.currentStep = 'awaitingEmail';
         let response = "Thank you for your message. ";
         
+        // Tailor response based on sentiment
         if (session.sentiment === 'negative') {
             response += "We're sorry to hear about your experience. ";
         } else if (session.sentiment === 'positive') {
@@ -90,11 +135,13 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
         return response;
     }
 
+    // Email collection and ticket submission
     if (session.currentStep === 'awaitingEmail') {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (emailRegex.test(cleanMessage)) {
             session.email = cleanMessage;
 
+            // Create ticket object
             const ticket = {
                 feedbackType: session.feedbackType,
                 location: session.location,
@@ -102,17 +149,20 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
                 email: session.email,
                 sentiment: session.sentiment
             };
+            
+            // Send email notification
             sendTicketEmail(ticket);
 
             const ticketId = 'T-' + Math.floor(Math.random() * 10000);
             
-            // Get correct emoji for sentiment
+            // Prepare emoji for sentiment
             const sentimentEmoji = {
                 'positive': '😊',
                 'negative': '😞',
                 'neutral': '😐'
             }[session.sentiment] || '';
 
+            // Build comprehensive response
             const summary = `📨 Ticket #${ticketId} submitted.\n` +
                            `🗂️ Type: ${ticket.feedbackType}\n` +
                            `📍 Location: ${ticket.location}\n` +
@@ -122,6 +172,7 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
                            `✅ Your ${ticket.feedbackType} has been sent to the branch manager. They'll contact you soon.\n\n` +
                            `Would you like to continue chatting? (yes/no)`;
 
+            // Reset session state
             session.currentStep = null;
             session.feedbackType = null;
             session.location = null;
@@ -136,6 +187,7 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
         }
     }
 
+    // Menu information response
     if (/(menu|food|eat|burger|tenders|wings|sides|fries|drinks|1)/.test(cleanMessage)) {
         return "Our delicious menu includes:\n\n" +
                "🍔 Chicken Burgers\n\n" +
@@ -152,6 +204,7 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
                "Would you like to know our hours or location?";
     }
 
+    // Hours information response
     if (/(hour|time|open|close|schedule|when|2)/.test(cleanMessage)) {
         return "🕒 Our opening hours:\n\n" +
                "Sunday-Thursday: 12pm-9pm\n" +
@@ -159,6 +212,7 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
                "Can I help with anything else?";
     }
 
+    // Location information response
     if (/(location|address|where|find|map|directions|)/.test(cleanMessage)) {
         return "📍 Find us at:\n\n" +
                "Millenium Walkway\n" +
@@ -168,22 +222,41 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
                "Need our menu or hours?";
     }
 
+    // Default response
     return "I can help with:\n\n1. 🍔 Menu\n2. 🕒 Hours\n3. 📍 Location\n4. 📩 Help (Feedback and Complaint)\n\nWhat would you like?";
 }
 
+// ==================================================================
+// gRPC Service Methods
+// ==================================================================
+
+/**
+ * GetBotResponse - Unary RPC for single message responses
+ * @param {grpc.ServerUnaryCall} call - gRPC call object
+ * @param {grpc.sendUnaryData} callback - Response callback
+ */
 function GetBotResponse(call, callback) {
     try {
+        // API key authentication
         if (call.request.api_key !== API_KEY) {
             return callback({ code: grpc.status.PERMISSION_DENIED });
         }
+        
         const reply = handleUserMessage(call.request.message);
         callback(null, { reply });
     } catch (err) {
         console.error('GetBotResponse error:', err);
-        callback({ code: grpc.status.INTERNAL, message: "Please try again." });
+        callback({ 
+            code: grpc.status.INTERNAL, 
+            message: "Please try again." 
+        });
     }
 }
 
+/**
+ * LiveChat - Bidirectional streaming RPC for conversational chat
+ * @param {grpc.ServerDuplexStream} call - Duplex stream
+ */
 function LiveChat(call) {
     let lastBotMessage = '';
     const session = {
@@ -195,11 +268,13 @@ function LiveChat(call) {
         awaitingContinuation: false
     };
 
+    // Send initial greeting
     call.write({
         user_id: "bot",
         text: "Hello! I can help with:\n\n1. 🍔 Menu\n2. 🕒 Hours\n3. 📍 Location\n4. 📩 Help (Feedback and Complaint)\n\nWhat would you like?"
     });
 
+    // Handle incoming messages
     call.on('data', (message) => {
         try {
             const reply = handleUserMessage(message.text, lastBotMessage, session);
@@ -207,6 +282,7 @@ function LiveChat(call) {
 
             call.write({ user_id: "bot", text: reply });
 
+            // End stream if conversation concluded
             if (reply.includes("Thank you for chatting")) {
                 call.end();
             }
@@ -216,17 +292,25 @@ function LiveChat(call) {
         }
     });
 
+    // Clean up on stream end
     call.on('end', () => call.end());
     call.on('error', (err) => console.error('LiveChat error:', err));
 }
 
+/**
+ * CreateTicket - Ticket creation endpoint
+ * @param {grpc.ServerUnaryCall} call - gRPC call object
+ * @param {grpc.sendUnaryData} callback - Response callback
+ */
 function CreateTicket(call, callback) {
     const { user_id, location, feedback_type, message } = call.request;
     
+    // Perform sentiment analysis
     const sentimentResult = sentiment.analyze(message);
     const sentimentLabel = sentimentResult.score > 0 ? 'positive' : 
                           sentimentResult.score < 0 ? 'negative' : 'neutral';
 
+    // Generate ticket ID and assign staff based on sentiment
     const ticketId = 'T-' + Math.floor(Math.random() * 10000);
     const staffAssigned = sentimentLabel === 'negative' ? 'Senior Manager' : 'Team Member';
 
@@ -241,6 +325,10 @@ function CreateTicket(call, callback) {
     });
 }
 
+/**
+ * StreamSuggestions - Server streaming RPC for suggestions
+ * @param {grpc.ServerWritableStream} call - Writable stream
+ */
 function StreamSuggestions(call) {
     const suggestions = [
         "🍔 Ask about today's menu",
@@ -248,6 +336,7 @@ function StreamSuggestions(call) {
         "📍 Find your nearest Mad Egg location"
     ];
 
+    // Stream each suggestion
     suggestions.forEach(suggestion => {
         call.write({ suggestion });
     });
@@ -255,6 +344,11 @@ function StreamSuggestions(call) {
     call.end();
 }
 
+// ==================================================================
+// Email Notification System
+// ==================================================================
+
+// Configure nodemailer transporter (in production, use environment variables)
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
@@ -265,6 +359,10 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+/**
+ * Sends email notification for new tickets
+ * @param {Object} ticket - Ticket object containing feedback details
+ */
 function sendTicketEmail(ticket) {
     const sentimentEmoji = {
         'positive': '😊',
@@ -295,13 +393,17 @@ Please respond within ${ticket.sentiment === 'negative' ? '1 business day' : '2-
     });
 }
 
+// ==================================================================
+// Module Exports
+// ==================================================================
+
 module.exports = {
-    service: chatbotProto.ChatBotService.service,
-    implementation: {
+    service: chatbotProto.ChatBotService.service, // gRPC service definition
+    implementation: { // Implemented RPC methods
         GetBotResponse,
         LiveChat,
         CreateTicket,
         StreamSuggestions
     },
-    sendTicketEmail
+    sendTicketEmail // Exposed for testing
 };

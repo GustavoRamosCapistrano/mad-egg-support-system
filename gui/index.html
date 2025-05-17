@@ -1,59 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mad Egg - Support</title>
+    <!-- ==============================================================
+         META AND BASIC CONFIGURATION
+         ============================================================== -->
+    <meta charset="UTF-8"> <!-- Character encoding -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Responsive viewport -->
+    <title>Mad Egg - Support</title> <!-- Page title -->
+
+    <!-- ==============================================================
+         STYLESHEETS
+         ============================================================== -->
+    <!-- Google Fonts - Poppins (400 regular, 700 bold, 900 black) -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;900&display=swap">
-    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="styles.css"> <!-- Main stylesheet -->
 </head>
 <body>
-    <!-- Header similar to Mad Egg website -->
+    <!-- ==============================================================
+         HEADER SECTION (Branding and Navigation)
+         ============================================================== -->
     <header class="madegg-header">
         <div class="container">
             <nav>
+                <!-- Logo -->
                 <div class="logo">
-                    <img src="https://www.madegg.ie/wp-content/uploads/2022/04/madegg-logo.png" alt="Mad Egg Logo">
+                    <img src="https://www.madegg.ie/wp-content/uploads/2022/04/madegg-logo.png" 
+                         alt="Mad Egg Logo" 
+                         width="150"
+                         height="auto">
                 </div>
+                
+                <!-- Main Navigation -->
                 <ul class="nav-links">
-                    <li><a href="#">Menu</a></li>
-                    <li><a href="#">Locations</a></li>
-                    <li><a href="#">About</a></li>
-                    <li><a href="#">Order</a></li>
+                    <li><a href="#">Menu</a></li>          <!-- Navigation to menu -->
+                    <li><a href="#">Locations</a></li>     <!-- Navigation to locations -->
+                    <li><a href="#">About</a></li>         <!-- Navigation to about page -->
+                    <li><a href="#">Order</a></li>         <!-- Navigation to order page -->
                 </ul>
             </nav>
         </div>
     </header>
 
-    <!-- Hero Section -->
+    <!-- ==============================================================
+         HERO SECTION (Main promotional banner)
+         ============================================================== -->
     <section class="hero">
         <div class="container">
-            <h1>CHICKEN SO GOOD IT'LL MAKE YOU CLUCK</h1>
-            <a href="#" class="btn">View Menu</a>
+            <h1>CHICKEN SO GOOD IT'LL MAKE YOU CLUCK</h1> <!-- Hero headline -->
+            <a href="#" class="btn">View Menu</a>         <!-- Call-to-action button -->
         </div>
     </section>
 
-    <!-- Floating Chat Button -->
-    <div class="chat-button" id="chatButton">
-        <i class="fas fa-comment-dots"></i>
+    <!-- ==============================================================
+         CHAT INTERFACE COMPONENTS
+         ============================================================== -->
+    
+    <!-- Floating Chat Button (Fixed position) -->
+    <div class="chat-button" id="chatButton" aria-label="Open chat">
+        <i class="fas fa-comment-dots"></i> <!-- Chat icon from Font Awesome -->
     </div>
 
-    <!-- Chat Container -->
+    <!-- Chat Container (Initially hidden) -->
     <div class="chat-container" id="chatContainer">
+        <!-- Chat Header with title and close button -->
         <div class="chat-header">
-            <h3>Mad Egg Support</h3>
-            <button class="close-chat" id="closeChat">&times;</button>
+            <h3>Mad Egg Support</h3> <!-- Chat title -->
+            <button class="close-chat" id="closeChat" aria-label="Close chat">
+                &times; <!-- Close icon (X) -->
+            </button>
         </div>
+        
+        <!-- Messages Container (Scrollable) -->
         <div class="chat-messages" id="chatMessages">
-            <!-- Messages will appear here -->
+            <!-- Messages will be dynamically inserted here by chat.js -->
         </div>
+        
+        <!-- Input Area -->
         <div class="chat-input">
-            <input type="text" id="userInput" placeholder="Type your message...">
-            <button id="sendButton"><i class="fas fa-paper-plane"></i></button>
+            <input type="text" 
+                   id="userInput" 
+                   placeholder="Type your message..."
+                   aria-label="Type your message"> <!-- Message input field -->
+                   
+            <button id="sendButton" aria-label="Send message">
+                <i class="fas fa-paper-plane"></i> <!-- Send icon from Font Awesome -->
+            </button>
         </div>
     </div>
 
-    <script src="chat.js"></script>
+    <!-- ==============================================================
+         JAVASCRIPT
+         ============================================================== -->
+    <script src="chat.js"></script> <!-- Main chat functionality -->
 </body>
 </html>
