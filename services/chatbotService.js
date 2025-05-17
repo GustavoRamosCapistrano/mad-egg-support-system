@@ -199,9 +199,23 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
                "Heart Breaker €14.50 \n" +
                "Side Chick €14.00 \n\n" +
                "🍗 Tenders\n" +
+               "Nashville Tender €10.95\n" +
+               "Love Me Ranch Tender €10.95 \n" +
+               "Love Me My Way €10.95 \n" +
+               "Love Me Sweetie €10.95 \n" +
+               "Double Stack €19.95 \n\n" +
                "🍟 Sides\n" +
-               "🥤 Drinks\n\n" +
-               "Would you like to know our hours or location?";
+               "Mac And Cheese €9.95\n" +
+               "Fries €5.95 \n" +
+               "Tator Tots €5.95 \n" +
+               "Loaded Fries/Tots €9.95 \n" +
+               "Crack Fries/tots €9.95 \n\n" +
+               "🥤 Drinks\n" +
+               "Coke €3.10\n" +
+               "Coke Zero/Diet €3.00 \n" +
+               "Fanta Orange/Lemon €3.00 \n" +
+               "7UP €3.00 \n\n" +
+               "Would you like to know our hours, location or help (feedback or complaint)?";
     }
 
     // Hours information response
@@ -209,7 +223,7 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
         return "🕒 Our opening hours:\n\n" +
                "Sunday-Thursday: 12pm-9pm\n" +
                "Friday-Saturday: 12pm-10pm\n\n" +
-               "Can I help with anything else?";
+               "Would you like to know our hours, location or help (feedback or complaint)?";
     }
 
     // Location information response
@@ -219,7 +233,7 @@ function handleUserMessage(message, lastBotMessage = '', session = {}) {
                "Charlotte Way\n" +
                "Dundrum Shopping Centre\n" +
                "Liffey Valley Shopping Centre\n\n" +
-               "Need our menu or hours?";
+               "Would you like to know our hours, location or help (feedback or complaint)?";
     }
 
     // Default response
